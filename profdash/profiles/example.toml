@@ -25,10 +25,11 @@ skip_subject_patterns = []  # regexes, e.g. 'homework|exam|tuition'
 token_path = ""
 
 # Venue tiers for paper relevance + scoring digests.
-# `preset` picks a built-in ("theory"); inline lists extend it.
-# You can also point preset at your own .toml file path.
+# `preset` is one name or a list: research areas (see `prof areas --venues`),
+# e.g. ["sec", "crypt"], a whole group "group:systems", the built-in
+# "theory", or a path to your own .toml. Inline lists extend it.
 [venues]
-preset = ""
+preset = ""                 # e.g. ["mlmining", "nlp"]
 strong = []
 moderate = []
 lower = []

@@ -107,7 +107,12 @@ def cmd_areas(args):
             if a.next_tier:
                 confs += " (+ " + ", ".join(c.upper() for c in a.next_tier) + ")"
             print(f"  {a.code:<14} {a.title:<14} {confs}")
+            if args.venues:
+                v = areas.VENUES.get(a.code, {})
+                print(f"  {'':<14} {'':<14} DBLP strong:   {', '.join(v.get('strong', ()))}")
+                print(f"  {'':<14} {'':<14} DBLP moderate: {', '.join(v.get('moderate', ()))}")
     print("\nUse with: prof import csrankings --area <code|name|group> ...")
+    print('      or: [venues] preset = ["<code>", ...] in profile.toml')
 
 
 def cmd_serve(args):
@@ -279,6 +284,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_cs.set_defaults(fn=cmd_import)
 
     p_areas = sub.add_parser("areas", help="list the CS research areas and their conferences")
+    p_areas.add_argument("--venues", action="store_true",
+                         help="also show the DBLP venue tiers used by `[venues] preset`")
     p_areas.set_defaults(fn=cmd_areas)
 
     p_serve = sub.add_parser("serve", help="run the dashboard")

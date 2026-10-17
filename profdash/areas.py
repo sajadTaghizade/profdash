@@ -100,3 +100,168 @@ def primary_area(scores: dict[str, float]) -> Area | None:
         if v > best_v:
             best, best_v = a, v
     return best
+
+
+# DBLP venue strings per area, as they appear in the DBLP search API `venue`
+# field (matched case-insensitively, with volume suffixes like "(1)" ignored —
+# see profdash.venues). `strong` = the CSRankings conferences for the area,
+# `moderate` = well-regarded second-tier conferences and journals.
+VENUES: dict[str, dict[str, tuple[str, ...]]] = {
+    # --- AI -----------------------------------------------------------------
+    "ai": {
+        "strong": ("AAAI", "IJCAI"),
+        "moderate": ("ECAI", "AAMAS", "KR", "UAI", "Artif. Intell.",
+                     "J. Artif. Intell. Res."),
+    },
+    "vision": {
+        "strong": ("CVPR", "ICCV", "ECCV"),
+        "moderate": ("BMVC", "WACV", "3DV", "IEEE Trans. Pattern Anal. Mach. Intell.",
+                     "Int. J. Comput. Vis."),
+    },
+    "mlmining": {
+        "strong": ("NeurIPS", "NIPS", "ICML", "ICLR", "KDD"),
+        "moderate": ("AISTATS", "UAI", "COLT", "J. Mach. Learn. Res.",
+                     "Trans. Mach. Learn. Res.", "ICDM", "SDM", "WSDM", "CIKM"),
+    },
+    "nlp": {
+        "strong": ("ACL", "EMNLP", "NAACL-HLT", "NAACL"),
+        "moderate": ("EACL", "COLING", "CoNLL", "Trans. Assoc. Comput. Linguistics",
+                     "ACL (Findings)", "EMNLP (Findings)", "NAACL (Findings)",
+                     "Comput. Linguistics"),
+    },
+    "inforet": {
+        "strong": ("SIGIR", "WWW"),
+        "moderate": ("CIKM", "WSDM", "ECIR", "RecSys", "ACM Trans. Inf. Syst."),
+    },
+    # --- Systems ------------------------------------------------------------
+    "arch": {
+        "strong": ("ISCA", "MICRO", "ASPLOS", "HPCA"),
+        "moderate": ("PACT", "IEEE Comput. Archit. Lett.", "ACM Trans. Archit. Code Optim.",
+                     "ICS", "DATE"),
+    },
+    "comm": {
+        "strong": ("SIGCOMM", "NSDI"),
+        "moderate": ("CoNEXT", "INFOCOM", "HotNets", "IEEE/ACM Trans. Netw.",
+                     "Proc. ACM Netw.", "ICNP"),
+    },
+    "sec": {
+        "strong": ("CCS", "SP", "USENIX Security", "USENIX Security Symposium", "NDSS"),
+        "moderate": ("EuroS&P", "ACSAC", "RAID", "AsiaCCS", "ESORICS",
+                     "Proc. Priv. Enhancing Technol.", "IEEE Trans. Inf. Forensics Secur.",
+                     "IEEE Trans. Dependable Secur. Comput."),
+    },
+    "mod": {
+        "strong": ("SIGMOD Conference", "Proc. ACM Manag. Data", "Proc. VLDB Endow.",
+                   "ICDE", "PODS"),
+        "moderate": ("EDBT", "CIDR", "ICDT", "VLDB J.", "IEEE Trans. Knowl. Data Eng.",
+                     "CIKM"),
+    },
+    "da": {
+        "strong": ("DAC", "ICCAD"),
+        "moderate": ("DATE", "ASP-DAC", "ISPD",
+                     "IEEE Trans. Comput. Aided Des. Integr. Circuits Syst."),
+    },
+    "bed": {
+        "strong": ("EMSOFT", "RTAS", "RTSS"),
+        "moderate": ("ECRTS", "CODES+ISSS", "LCTES", "ICCPS",
+                     "ACM Trans. Embed. Comput. Syst."),
+    },
+    "hpc": {
+        "strong": ("SC", "HPDC", "ICS"),
+        "moderate": ("PPoPP", "IPDPS", "ICPP", "CLUSTER", "SPAA",
+                     "IEEE Trans. Parallel Distributed Syst."),
+    },
+    "mobile": {
+        "strong": ("MobiCom", "MobiSys", "SenSys"),
+        "moderate": ("IPSN", "INFOCOM", "IEEE Trans. Mob. Comput.",
+                     "Proc. ACM Interact. Mob. Wearable Ubiquitous Technol."),
+    },
+    "metrics": {
+        "strong": ("IMC", "SIGMETRICS", "Proc. ACM Meas. Anal. Comput. Syst."),
+        "moderate": ("PAM", "Perform. Evaluation", "MASCOTS"),
+    },
+    "ops": {
+        "strong": ("SOSP", "OSDI", "EuroSys", "FAST", "USENIX ATC",
+                   "USENIX Annual Technical Conference"),
+        "moderate": ("SoCC", "VEE", "HotOS", "Middleware", "ACM Trans. Comput. Syst.",
+                     "ACM Trans. Storage"),
+    },
+    "plan": {
+        "strong": ("POPL", "PLDI", "Proc. ACM Program. Lang.", "ICFP", "OOPSLA"),
+        "moderate": ("ECOOP", "ESOP", "CC", "CGO", "SAS",
+                     "ACM Trans. Program. Lang. Syst."),
+    },
+    "soft": {
+        "strong": ("ICSE", "ESEC/SIGSOFT FSE", "SIGSOFT FSE", "Proc. ACM Softw. Eng.",
+                   "ASE", "ISSTA"),
+        "moderate": ("MSR", "ICSME", "SANER", "IEEE Trans. Software Eng.",
+                     "ACM Trans. Softw. Eng. Methodol.", "Empir. Softw. Eng."),
+    },
+    # --- Theory -------------------------------------------------------------
+    "act": {
+        "strong": ("STOC", "FOCS", "SODA"),
+        "moderate": ("ICALP", "ESA", "SoCG", "ITCS", "APPROX/RANDOM", "STACS", "CCC",
+                     "PODC", "SPAA", "SIAM J. Comput.", "J. ACM", "ACM Trans. Algorithms"),
+    },
+    "crypt": {
+        "strong": ("CRYPTO", "EUROCRYPT"),
+        "moderate": ("ASIACRYPT", "TCC", "PKC", "CHES", "J. Cryptol.",
+                     "IACR Trans. Cryptogr. Hardw. Embed. Syst."),
+    },
+    "log": {
+        "strong": ("LICS", "CAV"),
+        "moderate": ("TACAS", "CSL", "FSCD", "CONCUR", "VMCAI", "IJCAR", "CADE", "FM",
+                     "Log. Methods Comput. Sci.", "ACM Trans. Comput. Log."),
+    },
+    # --- Interdisciplinary --------------------------------------------------
+    "bio": {
+        "strong": ("ISMB", "RECOMB", "Bioinform."),
+        "moderate": ("BCB", "WABI", "PLoS Comput. Biol.", "BMC Bioinform.",
+                     "Nucleic Acids Res."),
+    },
+    "graph": {
+        "strong": ("SIGGRAPH", "SIGGRAPH Asia", "ACM Trans. Graph.",
+                   "Comput. Graph. Forum"),
+        "moderate": ("I3D", "SCA", "Pacific Graphics", "Eurographics",
+                     "IEEE Trans. Vis. Comput. Graph."),
+    },
+    "csed": {
+        "strong": ("SIGCSE",),
+        "moderate": ("ITiCSE", "ICER", "Koli Calling", "ACM Trans. Comput. Educ."),
+    },
+    "ecom": {
+        "strong": ("EC", "WINE"),
+        "moderate": ("SAGT", "AAMAS", "Games Econ. Behav.",
+                     "ACM Trans. Economics and Comput."),
+    },
+    "chi": {
+        "strong": ("CHI", "UIST", "UbiComp",
+                   "Proc. ACM Interact. Mob. Wearable Ubiquitous Technol."),
+        "moderate": ("CSCW", "DIS", "IUI", "Proc. ACM Hum. Comput. Interact.",
+                     "ACM Trans. Comput. Hum. Interact."),
+    },
+    "robotics": {
+        "strong": ("ICRA", "IROS", "Robotics: Science and Systems"),
+        "moderate": ("CoRL", "HRI", "IEEE Robotics Autom. Lett.", "IEEE Trans. Robotics",
+                     "Int. J. Robotics Res."),
+    },
+    "visualization": {
+        "strong": ("IEEE VIS", "VR", "IEEE VR", "IEEE Trans. Vis. Comput. Graph."),
+        "moderate": ("EuroVis", "PacificVis", "ISMAR"),
+    },
+}
+
+
+def venue_tiers(tokens: list[str]) -> tuple[list[str], list[str]]:
+    """(strong, moderate) DBLP venue strings for the given area tokens
+    (codes, names or group:<name>). A venue strong in any selected area is
+    never listed as moderate."""
+    strong: list[str] = []
+    moderate: list[str] = []
+    for tok in tokens:
+        for a in resolve(tok):
+            v = VENUES.get(a.code, {})
+            strong += [s for s in v.get("strong", ()) if s not in strong]
+            moderate += [m for m in v.get("moderate", ()) if m not in moderate]
+    moderate = [m for m in moderate if m not in strong]
+    return strong, moderate

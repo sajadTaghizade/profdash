@@ -148,19 +148,18 @@ def parse_hits(xml_text: str) -> list[dict]:
 def build_digest(name: str, hits: list[dict], strong: set[str], moderate: set[str],
                  *, now_y: int | None = None) -> str:
     now_y = now_y or datetime.date.today().year
-    strong = {s.lower().strip() for s in strong}
-    moderate = {s.lower().strip() for s in moderate}
+    from ..venues import venue_tier
     strong_recent, med_recent, other, years = [], [], [], []
     for h in hits:
         y = int(h["year"]) if str(h["year"]).isdigit() else None
         if y:
             years.append(y)
-        v = (h["venue"] or "").lower().strip()
+        tier = venue_tier(h["venue"] or "", strong, moderate)
         line = "%s [%s] %s" % (y, ((h["venue"] or "?"))[:30], h["title"][:90])
         recent = y is not None and y >= now_y - 3
-        if v in strong:
+        if tier == "strong":
             (strong_recent if recent else other).append(line)
-        elif v in moderate:
+        elif tier == "moderate":
             (med_recent if recent else other).append(line)
         else:
             other.append(line)

@@ -43,10 +43,12 @@ class Gmail:
 class Venues:
     """Venue tiers used by paper selection and scoring digests.
 
-    `preset` names a file in presets/ shipped with the package; inline
-    lists extend or override it.
+    `preset` is one name or a list of names. Each is a research area
+    (code or name, e.g. "sec", "Vision"), a group ("group:systems"), a
+    built-in file in presets/ ("theory"), or a path to your own .toml.
+    Inline lists extend it.
     """
-    preset: str = ""
+    preset: str | list[str] = ""
     strong: list[str] = field(default_factory=list)
     moderate: list[str] = field(default_factory=list)
     lower: list[str] = field(default_factory=list)
@@ -96,6 +98,22 @@ def _load_preset_file(path: str | Path) -> dict:
         return tomllib.load(f)
 
 
+def _resolve_preset(name: str) -> dict:
+    """A preset name -> {"strong": [...], "moderate": [...], "lower": [...]}."""
+    from . import areas
+    p = Path(name).expanduser()
+    if p.suffix == ".toml":
+        return _load_preset_file(p)
+    if (Path(__file__).resolve().parent / "presets" / f"{name}.toml").exists():
+        return _load_preset(name)
+    try:
+        strong, moderate = areas.venue_tiers([name])
+    except ValueError as e:
+        raise ValueError(f"venues.preset: {e} (or a built-in like 'theory', "
+                         f"or a path to your own .toml)") from None
+    return {"strong": strong, "moderate": moderate}
+
+
 def load_profile(path: str | Path | None = None) -> Profile:
     """Build a Profile from TOML + defaults. Missing file → pure defaults."""
     from . import paths
@@ -141,9 +159,9 @@ def load_profile(path: str | Path | None = None) -> Profile:
     moderate = [s.lower() for s in v.get("moderate", [])]
     lower = [s.lower() for s in v.get("lower", [])]
     preset_name = v.get("preset", "")
-    if preset_name:
-        p = Path(preset_name).expanduser()
-        data = _load_preset_file(p) if p.suffix == ".toml" else _load_preset(preset_name)
+    names = [preset_name] if isinstance(preset_name, str) else list(preset_name)
+    for name in (n for n in names if n):
+        data = _resolve_preset(name)
         strong += [s.lower() for s in data.get("strong", [])]
         moderate += [s.lower() for s in data.get("moderate", [])]
         lower += [s.lower() for s in data.get("lower", [])]

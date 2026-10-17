@@ -139,14 +139,8 @@ def parse_dblp_xml(xml_text: str, author_name: Optional[str] = None) -> list[dic
 
 
 def classify_venue(venue: str, strong: set[str], moderate: set[str]) -> str:
-    v = venue.lower().strip()
-    for tv in strong:
-        if tv in v or v in tv:
-            return "strong"
-    for tv in moderate:
-        if tv in v or v in tv:
-            return "moderate"
-    return "unknown"
+    from ..venues import venue_tier
+    return venue_tier(venue, strong, moderate)
 
 
 def select_relevant_papers(papers: list[dict], profile: Profile,
