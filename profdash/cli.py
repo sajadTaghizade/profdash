@@ -147,8 +147,18 @@ def cmd_serve(args):
     db_path = paths.find_db(args.db)
     if args.db:
         os.environ["PROF_DB_PATH"] = str(db_path)
+    from . import auth
+    protected = auth.is_enabled(db_path)
+    if args.host not in auth.LOCAL_HOSTS and not protected and not args.insecure:
+        raise SystemExit(
+            f"error: --host {args.host} makes the dashboard reachable from other "
+            f"machines, but no password is set.\n"
+            f"  Set one first:  prof set-password\n"
+            f"  (or pass --insecure to serve without a password anyway)")
     url = f"http://{args.host}:{args.port}"
     print(f"profdash serving at {url}  (Ctrl+C to stop)")
+    print("password protection: " + ("on" if protected else
+                                      "off  (enable with `prof set-password`)"))
     if not args.no_open:
         try:
             webbrowser.open(url)
@@ -156,6 +166,24 @@ def cmd_serve(args):
             pass
     uvicorn.run("profdash.dashboard.app:app",
                 host=args.host, port=args.port, log_level="warning")
+
+
+def cmd_set_password(args):
+    import getpass
+    from . import auth
+    db_path = _db_arg(args)
+    if args.clear:
+        auth.write_hash(db_path, None)
+        print("Password removed — the dashboard is open to anyone who can reach it.")
+        return
+    pw = getpass.getpass("New dashboard password: ")
+    if len(pw) < 8:
+        raise SystemExit("error: use at least 8 characters")
+    if getpass.getpass("Repeat: ") != pw:
+        raise SystemExit("error: passwords don't match")
+    auth.write_hash(db_path, auth.hash_password(pw))
+    print("Password set (stored as a salted hash in the database).")
+    print("Browsers will ask for it; any username works. Takes effect immediately.")
 
 
 def cmd_worker_tasks(args):
@@ -333,8 +361,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_serve.add_argument("--host", default="127.0.0.1")
     p_serve.add_argument("--port", type=int, default=8000)
     p_serve.add_argument("--no-open", action="store_true", help="don't open a browser tab")
+    p_serve.add_argument("--insecure", action="store_true",
+                         help="allow a non-localhost --host without a password")
     p_serve.add_argument("--db", help="path to profdash.sqlite")
     p_serve.set_defaults(fn=cmd_serve)
+
+    p_pw = sub.add_parser("set-password", help="protect the dashboard with a password")
+    p_pw.add_argument("--clear", action="store_true", help="remove the password")
+    p_pw.add_argument("--db", help="path to profdash.sqlite")
+    p_pw.set_defaults(fn=cmd_set_password)
 
     p_wt = sub.add_parser("worker", help="background workers")
     w_sub = p_wt.add_subparsers(dest="worker")

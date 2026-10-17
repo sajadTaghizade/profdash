@@ -67,6 +67,7 @@ Then edit `profile.toml` (your name, bio, research interests, timezone, venue ti
 | `prof worker tasks` | Process the paper-fetch / email-draft queue |
 | `prof worker gmail-scan` | Scan Gmail replies → confirmation queue |
 | `prof setup-gmail` | One-time OAuth flow for the Gmail features |
+| `prof set-password` | Require a password for the dashboard (`--clear` to remove) |
 | `prof audit` / `prof backup` | Data-quality report / consistent snapshot backups |
 
 ## The dashboard
@@ -132,7 +133,7 @@ Uses read-only + compose scopes. The scanner **suggests** reply classifications 
 
 ## Self-hosting
 
-The server binds to `127.0.0.1` by default. For LAN access, systemd units and cron schedules, see [docs/self-hosting.md](docs/self-hosting.md). **Note: the dashboard has no authentication** — it's designed for localhost/personal LAN use; don't expose it to the internet.
+The server binds to `127.0.0.1` by default. For LAN access, systemd units and cron schedules, see [docs/self-hosting.md](docs/self-hosting.md). Protect it with `prof set-password` before serving on anything but localhost (`prof serve` refuses otherwise); for access over the internet, put it behind HTTPS (Tailscale, Cloudflare Tunnel, a reverse proxy) — see the security notes there.
 
 ## Data & provenance
 

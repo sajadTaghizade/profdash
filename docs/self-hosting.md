@@ -70,18 +70,29 @@ Same pattern for Gmail scanning (`prof worker gmail-scan`,
 
 ## Security model (read this)
 
-- The dashboard has **no authentication**. It is meant to run on
-  `127.0.0.1` or your personal LAN. Do not port-forward it to the
-  internet. If you must expose it, put it behind a tunnel with auth
-  (e.g. Cloudflare Access, Tailscale, a reverse proxy with basic auth).
+- **Password.** `prof set-password` protects the whole dashboard; browsers
+  ask for it once per session (any username works). Only a salted scrypt
+  hash is stored, in the database's `config` table. `prof set-password
+  --clear` removes it. The `PROFDASH_PASSWORD` environment variable, if
+  set, is used instead (handy for systemd units).
+- `prof serve --host <anything but localhost>` refuses to start without a
+  password (`--insecure` overrides that, for a LAN you fully trust).
+- **The password travels with every request.** Over plain `http://` anyone
+  on the same network can read it. On your own LAN that's usually
+  acceptable; across the internet, always put profdash behind HTTPS:
+  Tailscale (`tailscale serve 8000`), Cloudflare Tunnel, or a reverse proxy
+  (Caddy, nginx) with a certificate. Don't port-forward plain HTTP.
+- Write requests (status changes, notes, tasks) from another website are
+  rejected (same-origin check), so a malicious page open in your browser
+  can't change your data.
 - The Gmail token sits in `~/.config/profdash/` — file permissions are
   yours to keep tight.
 - All writes are local SQLite. `prof backup` nightly is cheap insurance.
 
 ## LAN access
 
-`prof serve --host 0.0.0.0` binds all interfaces; open the port if you
-run a firewall:
+`prof serve --host 0.0.0.0` binds all interfaces (set a password first
+with `prof set-password`); open the port if you run a firewall:
 
 ```bash
 sudo ufw allow 8000/tcp    # example

@@ -18,11 +18,11 @@ from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from .. import paths
+from .. import auth, paths
 from ..profile import load_profile
 from . import db
 from .db import (
@@ -49,6 +49,26 @@ def _tz_label(tz: ZoneInfo) -> str:
 TZ_LABEL = _tz_label(_LOCAL_TZ)
 
 app = FastAPI(title="profdash")
+_auth = auth.Checker(db.db_path)
+
+
+@app.middleware("http")
+async def _security(request: Request, call_next):
+    """Password check (when one is set: `prof set-password`) and a
+    same-origin check on writes, so another website open in your browser
+    can't POST status changes to your dashboard."""
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        origin = request.headers.get("origin")
+        if origin and origin != "null":
+            from urllib.parse import urlparse
+            if urlparse(origin).netloc != request.headers.get("host"):
+                return PlainTextResponse("Cross-origin request blocked", status_code=403)
+    if request.url.path != "/health" and not _auth.check(
+            request.headers.get("authorization")):
+        return PlainTextResponse(
+            "Password required (set with `prof set-password`)", status_code=401,
+            headers={"WWW-Authenticate": 'Basic realm="profdash", charset="UTF-8"'})
+    return await call_next(request)
 
 
 @app.on_event("startup")
