@@ -101,7 +101,8 @@ name_tokens = ["jsmith42"]
 skip_subject_patterns = ['homework|exam|tuition']
 
 [venues]                       # paper relevance + scoring digests
-preset = "theory"              # built-in; or point at your own .toml
+preset = ["sec", "crypt"]      # research areas (`prof areas --venues`), "group:systems",
+                               # the built-in "theory", or a path to your own .toml
 strong = []                    # extra venues beyond the preset
 
 [outreach]

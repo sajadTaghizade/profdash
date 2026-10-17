@@ -41,6 +41,21 @@ Re-running the import refreshes areas on professors you already have.
 * Stats bar: per-area counts; click one to filter.
 * Professor page: area chips, strongest first.
 
+## Venue presets per area
+
+Each area also carries DBLP venue tiers (its CSRankings conferences as
+*strong*, well-known second-tier venues and journals as *moderate*). Use them
+for paper selection and scoring digests:
+
+```toml
+[venues]
+preset = ["mlmining", "nlp"]     # or "group:ai", or mix with "theory"
+strong = ["MyFavConf"]           # extra entries still work
+```
+
+`prof areas --venues` prints every area's tiers. Matching ignores case and
+DBLP volume suffixes such as "ECCV (12)".
+
 ## Existing databases
 
 `prof serve` and `prof migrate` add the new columns automatically. Run
