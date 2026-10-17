@@ -59,6 +59,8 @@ Then edit `profile.toml` (your name, bio, research interests, timezone, venue ti
 | `prof init [--demo]` | Create `./data/profdash.sqlite` + `profile.toml` in this directory |
 | `prof import csrankings` | Pull faculty from CSRankings (GitHub), map affiliations → countries |
 | `prof areas` | List the 27 research areas (4 groups) and the conferences behind each |
+| `prof import programs\|deadlines\|positions FILE` | Load program info, deadlines, open positions from CSV/JSON ([docs](docs/data-import.md)) |
+| `prof template <kind>` | Print an example import file to fill in |
 | `prof serve` | Run the dashboard (FastAPI + HTMX, no build step) |
 | `prof digest <ids...>` | Fetch DBLP publication digests for scoring |
 | `prof apply judgment.json` | Apply one AI/human scoring judgment (validated, evidence-required) |

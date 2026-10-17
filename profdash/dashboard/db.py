@@ -434,6 +434,37 @@ def get_university_groups(search: str = "", filters: dict[str, str] | None = Non
         if status not in ("not_contacted", "new"):
             groups[key]["contacted_count"] += 1
 
+    # Universities known only from imported programs (`prof import programs`)
+    # still get a card, unless professor-column filters are active.
+    if not any(col in _FILTERABLE_COLUMNS for col in filters):
+        prog_where, prog_params = [], []
+        if search:
+            prog_where.append("university LIKE ?")
+            prog_params.append(f"%{search}%")
+        hide_cond, hide_params = _hide_countries_sql(include_hidden=include_hidden)
+        if hide_cond:
+            prog_where.append(hide_cond)
+            prog_params.extend(hide_params)
+        with connect() as conn:
+            prog_rows = conn.execute(
+                "SELECT DISTINCT university, location_country FROM university_programs "
+                + ("WHERE " + " AND ".join(prog_where) if prog_where else ""),
+                prog_params).fetchall()
+        seen = {k[0] for k in groups}
+        for row in prog_rows:
+            uni = row["university"] or ""
+            norm_uni = _normalize_university(uni)
+            if not norm_uni or norm_uni in seen:
+                continue
+            seen.add(norm_uni)
+            country = row["location_country"] or ""
+            groups[(norm_uni, country.lower())] = {
+                "normalized_name": norm_uni, "display_name": uni,
+                "university": uni, "country": country,
+                "location_country": country,
+                "total_professors": 0, "contacted_count": 0,
+            }
+
     # Convert to list and sort by total_professors desc
     result = list(groups.values())
     result.sort(key=lambda x: (-x["total_professors"], x["display_name"]))

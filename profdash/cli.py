@@ -98,6 +98,31 @@ def cmd_import(args):
     print(f"Dataset cache: {stats['cache']}")
 
 
+def cmd_import_records(args):
+    from pathlib import Path
+    from .ingest import records
+    db_path = _db_arg(args)
+    path = Path(args.file).expanduser()
+    if not path.exists():
+        raise SystemExit(f"error: file not found: {path}")
+    try:
+        stats = records.run_import(db_path, args.dataset, path,
+                                   dry_run=args.dry_run, log=print)
+    except (ValueError, json.JSONDecodeError) as e:
+        raise SystemExit(f"error: {e}")
+    prefix = "[dry run] would import" if args.dry_run else "Imported"
+    print(f"{prefix} {args.dataset}: {stats['inserted']} new, {stats['updated']} updated, "
+          f"{stats['invalid']} skipped (of {stats['rows']} rows)")
+    if stats["deadlines_inserted"] or stats["deadlines_updated"]:
+        print(f"  deadlines: {stats['deadlines_inserted']} new, "
+              f"{stats['deadlines_updated']} updated")
+
+
+def cmd_template(args):
+    from .ingest import records
+    sys.stdout.write(records.template(args.kind, args.format))
+
+
 def cmd_areas(args):
     from . import areas
     for group in areas.GROUPS:
@@ -282,6 +307,22 @@ def build_parser() -> argparse.ArgumentParser:
     p_cs.add_argument("--refresh", action="store_true", help="re-download dataset files")
     p_cs.add_argument("--db", help="path to profdash.sqlite")
     p_cs.set_defaults(fn=cmd_import)
+
+    for kind, what in (("programs", "university programs (Universities page)"),
+                       ("deadlines", "application deadlines (Deadlines page)"),
+                       ("positions", "open positions (Positions page)")):
+        p_rec = imp_sub.add_parser(kind, help=f"{what} from a CSV/JSON file; "
+                                              f"see `prof template {kind}`")
+        p_rec.add_argument("file", help="a .csv, .json or .jsonl file")
+        p_rec.add_argument("--dry-run", action="store_true",
+                           help="validate and report without writing")
+        p_rec.add_argument("--db", help="path to profdash.sqlite")
+        p_rec.set_defaults(fn=cmd_import_records)
+
+    p_tpl = sub.add_parser("template", help="print an example import file to fill in")
+    p_tpl.add_argument("kind", choices=["programs", "deadlines", "positions"])
+    p_tpl.add_argument("--format", choices=["csv", "json"], default="csv")
+    p_tpl.set_defaults(fn=cmd_template)
 
     p_areas = sub.add_parser("areas", help="list the CS research areas and their conferences")
     p_areas.add_argument("--venues", action="store_true",
