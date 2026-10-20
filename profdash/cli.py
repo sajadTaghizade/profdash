@@ -456,7 +456,22 @@ def build_parser() -> argparse.ArgumentParser:
     return ap
 
 
+_PROXY_VARS = ("ALL_PROXY", "all_proxy", "HTTPS_PROXY", "https_proxy",
+               "HTTP_PROXY", "http_proxy")
+
+
+def _fix_proxy_env() -> None:
+    """Desktop proxy clients (v2ray, Nekoray, GNOME settings) often export
+    `socks://host:port`, a scheme httpx rejects. It means SOCKS5 — say so."""
+    import os
+    for var in _PROXY_VARS:
+        val = os.environ.get(var, "")
+        if val.lower().startswith("socks://"):
+            os.environ[var] = "socks5://" + val[len("socks://"):]
+
+
 def main(argv=None):
+    _fix_proxy_env()
     ap = build_parser()
     args = ap.parse_args(argv)
     if args.version:
