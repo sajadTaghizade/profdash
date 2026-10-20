@@ -77,6 +77,18 @@ DDL: list[str] = [
         PRIMARY KEY (professor_id, area)
     )
     """,
+    # --- research topics found by `prof topic` (DBLP title search) --------
+    """
+    CREATE TABLE IF NOT EXISTS professor_topics (
+        professor_id   TEXT NOT NULL,
+        topic          TEXT NOT NULL,
+        papers         INTEGER NOT NULL,
+        last_year      INTEGER,
+        sample_titles  TEXT,
+        updated_at     TEXT,
+        PRIMARY KEY (professor_id, topic)
+    )
+    """,
     # --- outreach history --------------------------------------------------
     """
     CREATE TABLE IF NOT EXISTS status_history (
@@ -241,6 +253,7 @@ INDEXES: list[str] = [
     "CREATE INDEX IF NOT EXISTS idx_professors_status ON professors(status)",
     "CREATE INDEX IF NOT EXISTS idx_professors_stage ON professors(stage)",
     "CREATE INDEX IF NOT EXISTS idx_professor_areas_area ON professor_areas(area)",
+    "CREATE INDEX IF NOT EXISTS idx_professor_topics_topic ON professor_topics(topic)",
     "CREATE INDEX IF NOT EXISTS idx_status_history_prof ON status_history(professor_id)",
     """CREATE INDEX IF NOT EXISTS idx_status_history_gmail_msg_id
        ON status_history(gmail_message_id) WHERE gmail_message_id IS NOT NULL""",

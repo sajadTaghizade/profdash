@@ -41,7 +41,7 @@ def _add_area_columns(conn: sqlite3.Connection) -> None:
     """Research-area columns/tables arrived after v0.1.0."""
     from .schema import DDL, ensure_columns
     for stmt in DDL:
-        if "professor_areas" in stmt:
+        if "professor_areas" in stmt or "professor_topics" in stmt:
             conn.execute(stmt)
     ensure_columns(conn)
 

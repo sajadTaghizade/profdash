@@ -60,3 +60,18 @@ DBLP volume suffixes such as "ECCV (12)".
 
 `prof serve` and `prof migrate` add the new columns automatically. Run
 `prof import csrankings` once to fill in areas for professors you already have.
+
+## Narrower topics: `prof topic`
+
+Areas are broad. For a specific topic, search DBLP paper titles:
+
+```bash
+prof topic "named data networking" --also "information-centric" --name ndn --since 2015
+prof topic "federated learning" --min-papers 3 --exclude-country Iran
+```
+
+Every author is matched to your professors by exact DBLP name. You get a
+ranked list in the terminal, a CSV (`topic-<name>.csv`) that also lists
+frequent authors who are *not* in your database (students, industry,
+faculty CSRankings doesn't track), and a **topic** filter on the
+Professors page. Re-running a topic replaces its previous results.

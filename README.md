@@ -58,6 +58,7 @@ Then edit `profile.toml` (your name, bio, research interests, timezone, venue ti
 |---|---|
 | `prof init [--demo]` | Create `./data/profdash.sqlite` + `profile.toml` in this directory |
 | `prof import csrankings` | Pull faculty from CSRankings (GitHub), map affiliations → countries |
+| `prof topic "QUERY"` | Find professors with papers on a topic (DBLP title search), CSV report + dashboard topic filter |
 | `prof areas` | List the 27 research areas (4 groups) and the conferences behind each |
 | `prof import programs\|deadlines\|positions FILE` | Load program info, deadlines, open positions from CSV/JSON ([docs](docs/data-import.md)) |
 | `prof template <kind>` | Print an example import file to fill in |

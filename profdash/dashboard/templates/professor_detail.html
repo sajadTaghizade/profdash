@@ -39,6 +39,12 @@
       {{ a.title }}
     </a>
   {% endfor %}
+  {% for t in topics %}
+    <a href="/professors?topic={{ t.topic|urlencode }}" title="{{ t.sample_titles }}"
+       class="inline-flex items-center h-7 px-2.5 rounded-full text-xs border border-accent/60 bg-accent/10 text-accent">
+      #{{ t.topic }} &middot; {{ t.papers }} paper{{ 's' if t.papers != 1 }}
+    </a>
+  {% endfor %}
 </div>
 
 <div class="grid lg:grid-cols-3 gap-4">

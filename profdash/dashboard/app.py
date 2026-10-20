@@ -349,6 +349,7 @@ def _professor_detail_ctx(professor_id: str) -> dict | None:
             db.get_professor_university_context, prof.get("university")),
         "draft": db.retry_once_on_lock(db.get_latest_email_draft, professor_id),
         "areas": db.retry_once_on_lock(db.get_areas_for_professor, professor_id),
+        "topics": db.retry_once_on_lock(db.get_topics_for_professor, professor_id),
     }
 
 

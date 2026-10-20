@@ -94,6 +94,17 @@ _FILTERABLE_COLUMNS: list[str] = [
 ]
 
 
+def _filter_sql(col: str, val: str, prefix: str = "") -> tuple[str, list] | None:
+    """WHERE fragment for one table filter. `topic` is virtual: professors
+    with a professor_topics row for that topic (`prof topic`)."""
+    if col == "topic":
+        return (f"{prefix}id IN (SELECT professor_id FROM professor_topics "
+                f"WHERE topic = ?)", [val])
+    if col in _FILTERABLE_COLUMNS:
+        return f"{prefix}{col} = ?", [val]
+    return None
+
+
 def connect() -> sqlite3.Connection:
     """Open a connection with WAL + short-write-friendly PRAGMAs."""
     p = db_path()
@@ -179,9 +190,10 @@ def count_professors_filtered(search: str = "", filters: dict[str, str] | None =
         params.extend(hide_params)
 
     for col, val in filters.items():
-        if col in _FILTERABLE_COLUMNS:
-            where_clauses.append(f"professors.{col} = ?")
-            params.append(val)
+        frag = _filter_sql(col, val, "professors.")
+        if frag:
+            where_clauses.append(frag[0])
+            params.extend(frag[1])
 
     where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
@@ -200,6 +212,8 @@ def get_filter_options() -> dict[str, list[str]]:
                 f"SELECT DISTINCT {col} FROM professors WHERE {col} IS NOT NULL AND {col} != '' ORDER BY {col}"
             ).fetchall()
             options[col] = [r[0] for r in rows]
+        options["topic"] = [r[0] for r in conn.execute(
+            "SELECT DISTINCT topic FROM professor_topics ORDER BY topic")]
         return options
 
 
@@ -220,9 +234,10 @@ def get_stats(search: str = "", filters: dict[str, str] | None = None,
         params.extend(hide_params)
 
     for col, val in filters.items():
-        if col in _FILTERABLE_COLUMNS:
-            where_clauses.append(f"{col} = ?")
-            params.append(val)
+        frag = _filter_sql(col, val, "")
+        if frag:
+            where_clauses.append(frag[0])
+            params.extend(frag[1])
 
     where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
@@ -337,9 +352,10 @@ def list_professors(
         params.extend(hide_params)
 
     for col, val in filters.items():
-        if col in _FILTERABLE_COLUMNS:
-            where_clauses.append(f"{col} = ?")
-            params.append(val)
+        frag = _filter_sql(col, val, "")
+        if frag:
+            where_clauses.append(frag[0])
+            params.extend(frag[1])
 
     where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
@@ -393,9 +409,10 @@ def get_university_groups(search: str = "", filters: dict[str, str] | None = Non
         params.extend(hide_params)
 
     for col, val in filters.items():
-        if col in _FILTERABLE_COLUMNS:
-            where_clauses.append(f"professors.{col} = ?")
-            params.append(val)
+        frag = _filter_sql(col, val, "professors.")
+        if frag:
+            where_clauses.append(frag[0])
+            params.extend(frag[1])
 
     where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
@@ -436,7 +453,7 @@ def get_university_groups(search: str = "", filters: dict[str, str] | None = Non
 
     # Universities known only from imported programs (`prof import programs`)
     # still get a card, unless professor-column filters are active.
-    if not any(col in _FILTERABLE_COLUMNS for col in filters):
+    if not any(col in _FILTERABLE_COLUMNS or col == "topic" for col in filters):
         prog_where, prog_params = [], []
         if search:
             prog_where.append("university LIKE ?")
@@ -498,6 +515,13 @@ def get_areas_for_professor(professor_id: str) -> list[dict[str, Any]]:
             out.append({"code": a.code, "title": a.title, "group": a.group,
                         "score": r["score"]})
     return out
+
+
+def get_topics_for_professor(professor_id: str) -> list[dict[str, Any]]:
+    with connect() as conn:
+        return [dict(r) for r in conn.execute(
+            "SELECT topic, papers, last_year, sample_titles FROM professor_topics "
+            "WHERE professor_id = ? ORDER BY papers DESC", (professor_id,))]
 
 
 def get_evidence_for_professor(professor_id: str) -> list[dict[str, Any]]:
@@ -593,7 +617,7 @@ def bulk_change_status(professor_ids: list[str], status: str) -> int:
 
 
 # Expose for app.py
-FILTERABLE_COLUMNS = _FILTERABLE_COLUMNS
+FILTERABLE_COLUMNS = _FILTERABLE_COLUMNS + ["topic"]
 
 
 def get_status_history(professor_id: str) -> list[dict[str, Any]]:

@@ -123,6 +123,33 @@ def cmd_template(args):
     sys.stdout.write(records.template(args.kind, args.format))
 
 
+def cmd_topic(args):
+    from pathlib import Path
+    from .scoring import topic
+    db_path = _db_arg(args)
+    queries = [args.query] + (args.also or [])
+    name = args.name or topic.slug(args.query)
+    csv_path = Path(args.csv or f"topic-{name}.csv")
+    print(f"Searching DBLP titles for: {', '.join(repr(q) for q in queries)}")
+    try:
+        res = topic.run(db_path, queries, name=name, since=args.since,
+                        min_papers=args.min_papers, csv_path=csv_path,
+                        exclude_countries=args.exclude_country, log=print)
+    except RuntimeError as e:
+        raise SystemExit(f"error: {e}")
+    print(f"\n{res['papers']} papers, {res['authors']} authors; "
+          f"{res['matched']} of them are professors in your database.\n")
+    shown = [r for r in res["rows"] if r["in_db"]][:args.top]
+    for r in shown:
+        print(f"  {r['papers']:>3} papers (last {r['last_year']})  {r['author']:<32} "
+              f"{r['university']} — {r['country'] or '?'}")
+    if res["matched"] > len(shown):
+        print(f"  ... and {res['matched'] - len(shown)} more")
+    print(f"\nFull list (incl. {res['authors'] - res['matched']} authors not in your "
+          f"database): {csv_path}")
+    print(f"Dashboard: Professors page -> topic filter '{name}'")
+
+
 def cmd_areas(args):
     from . import areas
     for group in areas.GROUPS:
@@ -351,6 +378,20 @@ def build_parser() -> argparse.ArgumentParser:
     p_tpl.add_argument("kind", choices=["programs", "deadlines", "positions"])
     p_tpl.add_argument("--format", choices=["csv", "json"], default="csv")
     p_tpl.set_defaults(fn=cmd_template)
+
+    p_tp = sub.add_parser("topic", help="find professors publishing on a topic (DBLP title search)")
+    p_tp.add_argument("query", help='words that must appear in paper titles, e.g. "named data networking"')
+    p_tp.add_argument("--also", action="append", metavar="QUERY",
+                      help='another query merged into the same topic, e.g. --also "information-centric"')
+    p_tp.add_argument("--name", help="topic name for the dashboard filter (default: from the query)")
+    p_tp.add_argument("--since", type=int, help="only papers from this year on")
+    p_tp.add_argument("--min-papers", type=int, default=1, help="minimum papers per author (default 1)")
+    p_tp.add_argument("--exclude-country", action="append", metavar="COUNTRY",
+                      help='drop professors in this country, e.g. --exclude-country Iran (repeatable)')
+    p_tp.add_argument("--top", type=int, default=40, help="how many to print (CSV has all)")
+    p_tp.add_argument("--csv", help="report path (default: topic-<name>.csv)")
+    p_tp.add_argument("--db", help="path to profdash.sqlite")
+    p_tp.set_defaults(fn=cmd_topic)
 
     p_areas = sub.add_parser("areas", help="list the CS research areas and their conferences")
     p_areas.add_argument("--venues", action="store_true",
